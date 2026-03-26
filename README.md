@@ -32,7 +32,7 @@
 
 ## 公開URL
 
-- Vercel: （ここにURLを入れる）
-- GitHub: https://github.com/（あなたのリポジトリURL）
+- Vercel: https://spot-dig.vercel.app
+- GitHub: https://github.com/dna4570/spot-dig
 
 ---
