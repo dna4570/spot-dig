@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>世界ミステリー遺跡マップ</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Cinzel:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0b0f;
+      --surface: #12141a;
+      --border: #2a2d3a;
+      --accent: #c9a84c;
+      --accent2: #7b68ee;
+      --text: #d4cfc7;
+      --text-muted: #5a5870;
+      --alien: #4ade80;
+      --ancient: #f59e0b;
+      --stone: #94a3b8;
+      --energy: #a78bfa;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Kaisei Decol', serif;
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ヘッダー */
+    header {
+      position: relative;
+      text-align: center;
+      padding: 36px 20px 28px;
+      border-bottom: 1px solid var(--border);
+      background: radial-gradient(ellipse at 50% 0%, rgba(201, 168, 76, 0.08) 0%, transparent 70%);
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 40px,
+          rgba(201, 168, 76, 0.02) 40px, rgba(201, 168, 76, 0.02) 41px);
+      pointer-events: none;
+    }
+
+    .header-eyebrow {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      opacity: 0.8;
+    }
+
+    header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(1.6rem, 4vw, 2.8rem);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      text-shadow: 0 0 40px rgba(201, 168, 76, 0.3);
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    .header-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* メインレイアウト */
+    .layout {
+      display: flex;
+      height: calc(100vh - 130px);
+    }
+
+    /* サイドバー */
+    .sidebar {
+      width: 300px;
+      min-width: 300px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .filter-bar {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Noto Sans JP', sans-serif;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(201, 168, 76, 0.08);
+    }
+
+    .site-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .site-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .site-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .site-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .site-item {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(42, 45, 58, 0.5);
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .site-item:hover,
+    .site-item.active {
+      background: rgba(201, 168, 76, 0.05);
+    }
+
+    .site-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--accent);
+    }
+
+    .site-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e8e4dc;
+      margin-bottom: 4px;
+    }
+
+    .site-location {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .tag-row {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+
+    .tag-alien {
+      background: rgba(74, 222, 128, 0.12);
+      color: var(--alien);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+    }
+
+    .tag-ancient {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--ancient);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .tag-stone {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--stone);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .tag-energy {
+      background: rgba(167, 139, 250, 0.12);
+      color: var(--energy);
+      border: 1px solid rgba(167, 139, 250, 0.2);
+    }
+
+    /* 地図エリア */
+    .map-area {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #0d0f14;
+    }
+
+    /* 詳細パネル */
+    .detail-img {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+
+      width: 60px;
+      height: 60px;
+
+      object-fit: cover;
+      border-radius: 6px;
+
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .detail-img-placeholder {
+      width: 100%;
+      height: 150px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      background: #1a1c24;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+
+    .detail-panel {
+
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 320px;
+      background: rgba(18, 20, 26, 0.97);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      display: none;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .detail-panel.show {
+      display: block;
+    }
+
+    .detail-close {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .detail-close:hover {
+      color: var(--text);
+    }
+
+    .detail-eyebrow {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .detail-title {
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .detail-loc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .detail-tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .detail-mystery {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+      border-left: 2px solid var(--accent);
+      padding-left: 12px;
+      margin-bottom: 14px;
+    }
+
+    .detail-facts {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    .detail-facts span {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Leafletカスタム */
+    .leaflet-container {
+      background: #0d0f14 !important;
+    }
+
+    .custom-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px !important;
+      height: 32px !important;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      background: rgba(10, 11, 15, 0.9);
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      box-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: rgba(18, 20, 26, 0.97) !important;
+      border: 1px solid #2a2d3a !important;
+      border-radius: 6px !important;
+      color: #d4cfc7 !important;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .leaflet-popup-tip {
+      background: #12141a !important;
+    }
+
+    .popup-name {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .popup-mystery {
+      font-size: 11px;
+      color: #8a8699;
+      line-height: 1.5;
+    }
+
+    .popup-btn {
+      margin-top: 8px;
+      font-size: 11px;
+      padding: 5px 12px;
+      background: rgba(201, 168, 76, 0.1);
+      border: 1px solid rgba(201, 168, 76, 0.3);
+      color: var(--accent);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Noto Sans JP', sans-serif;
+      transition: background 0.2s;
+      width: 100%;
+    }
+
+    .popup-btn:hover {
+      background: rgba(201, 168, 76, 0.2);
+    }
+
+    @media (max-width: 700px) {
+      .sidebar {
+        display: none;
+      }
+
+      .detail-panel {
+        width: calc(100% - 32px);
+        left: 16px;
+        right: 16px;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+
+<body>
+
+  <header>
+    <div class="header-eyebrow">Ancient Mysteries of Earth</div>
+    <h1>世界<span>ミステリー</span>遺跡マップ</h1>
+    <p class="header-sub">12 sites · unexplained · still watching</p>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">遺跡リスト</div>
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">すべて</button>
+        <button class="filter-btn" data-filter="alien">👽 宇宙人説</button>
+        <button class="filter-btn" data-filter="stone">🪨 巨石</button>
+        <button class="filter-btn" data-filter="energy">⚡ エネルギー</button>
+      </div>
+      <div class="site-list" id="siteList"></div>
+    </aside>
+
+    <div class="map-area">
+      <div id="map"></div>
+      <div class="detail-panel" id="detailPanel">
+        <button class="detail-close" id="detailClose">×</button>
+        <div id="dImg"></div>
+        <div class="detail-eyebrow" id="dEyebrow"></div>
+        <div class="detail-title" id="dTitle"></div>
+        <div class="detail-loc" id="dLoc"></div>
+        <div class="detail-tags" id="dTags"></div>
+        <div class="detail-mystery" id="dMystery"></div>
+        <div class="detail-facts" id="dFacts"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // 遺跡データ（JSONオブジェクト）
+    // ここを増やせば遺跡が増える
+    // ============================================================
+    const SITES = [
+      {
+        id: 1,
+        name: "ゴベクリ・テペ",
+        nameEn: "Göbekli Tepe",
+        location: "トルコ",
+        lat: 37.2231, lng: 38.9225,
+        tags: ["alien", "ancient", "stone"],
+        emoji: "🗿",
+        image: "image/CHECK_IT.jpg",
+        mystery: "農業より1万2千年前に建設。当時の「原始人」がなぜこれほど精密な神殿を？定説をすべてひっくり返した遺跡。",
+        facts: "建設年代: 約BC1万年 / 発見: 1994年 / 深度: 地下15m以上に未発掘エリアあり"
+      },
+      {
+        id: 2,
+        name: "テオティワカン",
+        nameEn: "Teotihuacan",
+        location: "メキシコ",
+        lat: 19.6925, lng: -98.8438,
+        tags: ["alien", "energy", "ancient"],
+        emoji: "🔺",
+        image: "image/CHECK_IT.png",
+        mystery: "建設した民族が不明。太陽・月・金星の配置を正確に反映した都市設計。雲母が大量に使われた謎の部屋が存在。",
+        facts: "建設年代: BC200〜AD650頃 / 人口: 最大20万人 / ピラミッドの角度: 太陽と完全一致"
+      },
+      {
+        id: 3,
+        name: "マチュピチュ",
+        nameEn: "Machu Picchu",
+        location: "ペルー",
+        lat: -13.1631, lng: -72.5450,
+        tags: ["ancient", "stone", "energy"],
+        emoji: "🏔️",
+        image: "./image/SE_T_shats.jpg",
+        mystery: "標高2430mに巨石を積み上げた建設方法が未解明。石の間に紙一枚入らない精度。インカの「失われた都市」。",
+        facts: "建設年代: 15世紀頃 / 標高: 2430m / 石の数: 推定14万個以上"
+      },
+      {
+        id: 4,
+        name: "ストーンヘンジ",
+        nameEn: "Stonehenge",
+        location: "イギリス",
+        lat: 51.1789, lng: -1.8262,
+        tags: ["stone", "energy", "alien"],
+        emoji: "⭕",
+        image: "image/game_ai.png",
+        mystery: "巨石は300km離れた採石場から運ばれた。夏至・冬至の日の出と完全に一致する設計。磁場異常が観測される。",
+        facts: "建設年代: BC3000〜BC1500頃 / 最大石重量: 50トン / 磁場: 周辺に異常な電磁場"
+      },
+      {
+        id: 5,
+        name: "ギザのピラミッド",
+        nameEn: "Giza Pyramids",
+        location: "エジプト",
+        lat: 29.9792, lng: 31.1342,
+        tags: ["alien", "energy", "stone"],
+        emoji: "🔺",
+        image: "image/game_ai.png",
+        mystery: "現代技術でも再現不可能な精度。オリオン座の三ツ星と完全一致。内部に謎の空洞が2017年に発見された。",
+        facts: "建設年代: BC2560頃 / 使用石材: 230万個 / 真北からのズレ: 0.05度以内"
+      },
+      {
+        id: 6,
+        name: "ナスカの地上絵",
+        nameEn: "Nazca Lines",
+        location: "ペルー",
+        lat: -14.7390, lng: -75.1300,
+        tags: ["alien", "energy"],
+        emoji: "✈️",
+        image: "image/game_ai.png",
+        mystery: "上空からしか全体が見えない巨大な絵。誰のために、何のために描いたのか。一部は滑走路説も存在。",
+        facts: "制作年代: BC100〜AD800頃 / 総延長: 1300km以上 / 最大図形: 300m超"
+      },
+      {
+        id: 7,
+        name: "パレンケ",
+        nameEn: "Palenque",
+        location: "メキシコ",
+        lat: 17.4838, lng: -92.0453,
+        tags: ["alien", "ancient"],
+        emoji: "👑",
+        image: "image/game_ai.png",
+        mystery: "パカル王の石棺の彫刻がロケット操縦士に見えると話題に。マヤ文明の高度な天文学・数学の証拠が多数。",
+        facts: "建設年代: 7世紀頃 / パカル王没年: 683年 / 石棺重量: 5トン"
+      },
+      {
+        id: 8,
+        name: "三内丸山遺跡",
+        nameEn: "Sannai Maruyama",
+        location: "青森県、日本",
+        lat: 40.8019, lng: 140.6956,
+        tags: ["ancient", "stone"],
+        emoji: "🏺",
+        image: "image/game_ai.png",
+        mystery: "縄文時代に高さ15m以上の巨大木造建築。約5500年前の日本に高度な文明が存在した証拠。遮光器土偶の出土地。",
+        facts: "時代: 縄文時代（約5900〜4200年前） / 人口: 推定500人以上 / 遺跡面積: 35ha"
+      },
+      {
+        id: 9,
+        name: "ティワナク",
+        nameEn: "Tiwanaku",
+        location: "ボリビア",
+        lat: -16.5533, lng: -68.6733,
+        tags: ["alien", "stone", "ancient"],
+        emoji: "🚪",
+        image: "image/game_ai.png",
+        mystery: "標高3800mの高地に建設。太陽の門の石彫に描かれた生物が絶滅種に一致。水中に沈んだ遺跡が湖底に眠る。",
+        facts: "建設年代: AD300〜1000頃 / 標高: 3800m / 湖底遺跡: チチカカ湖底に未発掘"
+      },
+      {
+        id: 10,
+        name: "イースター島モアイ",
+        nameEn: "Easter Island Moai",
+        location: "チリ（イースター島）",
+        lat: -27.1127, lng: -109.3497,
+        tags: ["alien", "stone"],
+        emoji: "🗿",
+        image: "image/game_ai.png",
+        mystery: "孤立した島でなぜ900体もの巨像を？全て内陸を向いている謎。島民が消えた原因も未解明。",
+        facts: "建設年代: 1250〜1500年頃 / 最大像高さ: 21m / 最大重量: 82トン"
+      },
+      {
+        id: 11,
+        name: "バールベック",
+        nameEn: "Baalbek",
+        location: "レバノン",
+        lat: 34.0042, lng: 36.2118,
+        tags: ["stone", "alien"],
+        emoji: "🏛️",
+        image: "image/game_ai.png",
+        mystery: "現代最大のクレーンでも持ち上げられない1650トンの巨石を使用。ローマ時代より古い謎の地下構造物が存在。",
+        facts: "最大石重量: 1650トン / ローマ神殿建設: 紀元前1世紀〜 / 地下遺構: 深さ不明"
+      },
+      {
+        id: 12,
+        name: "コラ半島巨石群",
+        nameEn: "Kola Peninsula Megaliths",
+        location: "ロシア",
+        lat: 67.9734, lng: 33.0856,
+        tags: ["stone", "energy"],
+        emoji: "🪨",
+        image: "image/game_ai.png",
+        mystery: "北極圏に人工的に配置された巨石群。一部は強力な磁場を発している。建設者・目的が完全に不明。",
+        facts: "発見: 近年 / 場所: 北極圏 / 特徴: 磁場異常・人工的配置パターン"
+      }
+    ];
+
+    // ============================================================
+    // タグ設定
+    // ============================================================
+    const TAG_CONFIG = {
+      alien: { label: "👽 宇宙人説", cls: "tag-alien" },
+      ancient: { label: "🏛️ 古代文明", cls: "tag-ancient" },
+      stone: { label: "🪨 巨石", cls: "tag-stone" },
+      energy: { label: "⚡ エネルギー", cls: "tag-energy" },
+    };
+
+    // ============================================================
+    // 地図初期化
+    // ============================================================
+    const map = L.map('map', { zoomControl: true }).setView([20, 10], 2);
+
+    // ダーク系タイルレイヤー
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO',
+      subdomains: 'abcd',
+      maxZoom: 18
+    }).addTo(map);
+
+    // ============================================================
+    // マーカー生成
+    // ============================================================
+    let activeFilter = 'all';
+    let activeSiteId = null;
+    const markers = {};
+
+    function createMarkerIcon(site) {
+      return L.divIcon({
+        className: '',
+        html: `<div class="custom-marker">${site.emoji}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -18],
+      });
+    }
+
+    function buildTagsHtml(tags) {
+      return tags.map(t => {
+        const cfg = TAG_CONFIG[t];
+        return cfg ? `<span class="tag ${cfg.cls}">${cfg.label}</span>` : '';
+      }).join('');
+    }
+
+    function showDetail(site) {
+      activeSiteId = site.id;
+      // 画像表示
+      const dImg = document.getElementById('dImg');
+      if (site.image) {
+        dImg.innerHTML = `<img class="detail-img" src="${site.image}" alt="${site.name}" onerror="this.parentNode.innerHTML='<div class=\\'detail-img-placeholder\\'>${site.emoji}</div>'" />`;
+      } else {
+        dImg.innerHTML = `<div class="detail-img-placeholder">${site.emoji}</div>`;
+      }
+      document.getElementById('dEyebrow').textContent = site.nameEn + ' · ' + site.location;
+      document.getElementById('dTitle').textContent = site.name;
+      document.getElementById('dLoc').textContent = `📍 ${site.location}`;
+      document.getElementById('dTags').innerHTML = buildTagsHtml(site.tags);
+      document.getElementById('dMystery').textContent = site.mystery;
+      document.getElementById('dFacts').innerHTML = site.facts.replace(/\//g, '<br><span style="color:#2a2d3a">──</span> ');
+      document.getElementById('detailPanel').classList.add('show');
+
+      // サイドバーのアクティブ状態
+      document.querySelectorAll('.site-item').forEach(el => {
+        el.classList.toggle('active', parseInt(el.dataset.id) === site.id);
+      });
+
+      // 地図を中心に移動
+      map.panTo([site.lat, site.lng]);
+    }
+
+    SITES.forEach(site => {
+      const marker = L.marker([site.lat, site.lng], { icon: createMarkerIcon(site) }).addTo(map);
+
+      marker.bindPopup(`
+    <div class="popup-name">${site.emoji} ${site.name}</div>
+    <div class="popup-mystery">${site.mystery.slice(0, 60)}…</div>
+    <button class="popup-btn" onclick="selectSite(${site.id})">詳細を見る →</button>
+  `, { maxWidth: 220 });
+
+      marker.on('click', () => marker.openPopup());
+      markers[site.id] = marker;
+    });
+
+    // グローバル関数（popupのボタンから呼ぶ）
+    window.selectSite = function (id) {
+      const site = SITES.find(s => s.id === id);
+      if (site) { map.closePopup(); showDetail(site); }
+    };
+
+    // ============================================================
+    // サイドバーリスト描画
+    // ============================================================
+    function renderList() {
+      const list = document.getElementById('siteList');
+      list.innerHTML = '';
+      const filtered = activeFilter === 'all'
+        ? SITES
+        : SITES.filter(s => s.tags.includes(activeFilter));
+
+      filtered.forEach(site => {
+        const div = document.createElement('div');
+        div.className = 'site-item' + (site.id === activeSiteId ? ' active' : '');
+        div.dataset.id = site.id;
+        div.innerHTML = `
+      <div class="site-name">${site.emoji} ${site.name}</div>
+      <div class="site-location">📍 ${site.location}</div>
+      <div class="tag-row">${buildTagsHtml(site.tags)}</div>
+    `;
+        div.addEventListener('click', () => showDetail(site));
+        list.appendChild(div);
+      });
+    }
+
+    // ============================================================
+    // フィルターボタン
+    // ============================================================
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.filter;
+        renderList();
+      });
+    });
+
+    // 詳細パネルを閉じる
+    document.getElementById('detailClose').addEventListener('click', () => {
+      document.getElementById('detailPanel').classList.remove('show');
+      activeSiteId = null;
+      document.querySelectorAll('.site-item').forEach(el => el.classList.remove('active'));
+    });
+
+    // 初期描画
+    renderList();
+  </script>
+</body>
+
+</html>
