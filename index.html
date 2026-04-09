@@ -435,7 +435,6 @@
       }
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 
 <body>
@@ -762,6 +761,127 @@
     // 初期描画
     renderList();
   </script>
+    <!-- ① まずCDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      const SUPABASE_URL = "https://alsdwngthhvpfcushvob.supabase.co";
+      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsc2R3bmd0aGh2cGZjdXNodm9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0ODIxMzQsImV4cCI6MjA5MDA1ODEzNH0.O6jA08SAiuPSMpGZTkpRd0P-dUZ1_9cXxvO_w9oW_rw";
+      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      const modal = document.createElement('div');
+      modal.id = 'authModal';
+      modal.innerHTML = `
+          <div style="position:fixed;inset:0;background:rgba(0,0,0,0.88);
+            display:flex;align-items:center;justify-content:center;z-index:9999;">
+            <div style="background:#12141a;border:1px solid #c9a84c;border-radius:12px;
+              padding:40px 32px;width:340px;text-align:center;">
+              <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;
+                color:#c9a84c;margin-bottom:8px;">MYSTERY ATLAS</div>
+              <h2 style="font-family:'Cinzel',serif;color:#fff;font-size:1.3rem;margin-bottom:6px;">
+                世界の謎へアクセス</h2>
+              <p style="font-size:11px;color:#5a5870;margin-bottom:24px;">ログインして遺跡の闇に迫れ</p>
+              <input id="authEmail" type="email" placeholder="メールアドレス" style="
+                width:100%;padding:10px 14px;margin-bottom:10px;
+                background:#0a0b0f;border:1px solid #2a2d3a;border-radius:6px;
+                color:#d4cfc7;font-size:14px;outline:none;" />
+              <input id="authPass" type="password" placeholder="パスワード（6文字以上）" style="
+                width:100%;padding:10px 14px;margin-bottom:18px;
+                background:#0a0b0f;border:1px solid #2a2d3a;border-radius:6px;
+                color:#d4cfc7;font-size:14px;outline:none;" />
+              <button id="btnLogin" style="width:100%;padding:11px;background:#c9a84c;
+                color:#0a0b0f;border:none;border-radius:6px;font-weight:700;
+                cursor:pointer;font-size:14px;margin-bottom:8px;">ログイン</button>
+              <button id="btnSignup" style="width:100%;padding:11px;background:transparent;
+                color:#c9a84c;border:1px solid #c9a84c;border-radius:6px;
+                font-weight:700;cursor:pointer;font-size:14px;">新規登録</button>
+                <button id="btnGuest" style="width:100%;padding:8px;background:transparent;
+  color:#5a5870;border:none;cursor:pointer;font-size:12px;
+  margin-top:4px;text-decoration:underline;">ゲストとして見る →</button>
+              <p id="authMsg" style="color:#f87171;font-size:12px;margin-top:14px;min-height:16px;"></p>
+            </div>
+          </div>`;
+
+      const logoutBtn = document.createElement('button');
+      logoutBtn.id = 'btnLogout';
+      logoutBtn.textContent = 'ログアウト';
+      logoutBtn.style.cssText = `
+          position:fixed;top:16px;right:16px;z-index:1000;
+          padding:6px 16px;background:transparent;color:#c9a84c;
+          border:1px solid #c9a84c;border-radius:99px;
+          font-size:11px;cursor:pointer;display:none;letter-spacing:2px;`;
+      document.body.appendChild(logoutBtn);
+
+      async function checkAuth() {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          if (document.getElementById('authModal')) modal.remove();
+          logoutBtn.style.display = 'block';
+        } else {
+          document.body.appendChild(modal);
+          logoutBtn.style.display = 'none';
+        }
+      }
+
+      document.addEventListener('click', async (e) => {
+        const msg = document.getElementById('authMsg');
+          if (e.target.id === 'btnGuest') {
+          modal.remove();
+          logoutBtn.style.display = 'none';
+          return;
+        }
+
+        if (e.target.id === 'btnLogin') {
+          const msg = document.getElementById('authMsg');
+          const email = document.getElementById('authEmail').value;
+          const pass = document.getElementById('authPass').value;
+
+          msg.style.color = '#f87171';
+          msg.textContent = '...';
+
+          const { error } = await sb.auth.signInWithPassword({
+            email,
+            password: pass
+          });
+
+          if (error) {
+            msg.textContent = 'ログイン失敗: ' + error.message;
+          } else {
+            modal.remove();
+            logoutBtn.style.display = 'block';
+          }
+          return;
+        }
+        if (e.target.id === 'btnSignup') {
+          const msg = document.getElementById('authMsg');
+          const email = document.getElementById('authEmail').value;
+          const pass = document.getElementById('authPass').value;
+
+          msg.style.color = '#f87171';
+          msg.textContent = '...';
+
+          const { error } = await sb.auth.signUp({
+            email,
+            password: pass
+          });
+
+          if (error) {
+            msg.textContent = '登録失敗: ' + error.message;
+          } else {
+            msg.style.color = '#4ade80';
+            msg.textContent = '✅ 確認メールを送信しました！';
+          }
+          return;
+        }
+
+        if (e.target.id === 'btnLogout') {
+          await sb.auth.signOut();
+          logoutBtn.style.display = 'none';
+          document.body.appendChild(modal);
+        }
+      });
+
+      checkAuth();
+    </script>
 </body>
 
 </html>
